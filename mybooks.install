@@ -1,0 +1,47 @@
+<?php
+
+/**
+ * Implements hook_schema
+ */
+
+function mybooks_schema(){
+
+$schema['mybooks'] = array(
+  'description' => 'Table for myBooks module',
+  'fields' => array(
+  	'id' => array(
+      'description' => 'An autoincrement id',
+      'type' => 'serial',
+      'size' => 'small',
+      'not null' => TRUE,
+    ),
+    'title' => array(
+      'description' => 'Book Title',
+      'type' => 'varchar',
+      'length' => '100',
+      'not null' => TRUE,
+    ),
+    'author' => array(
+      'description' => 'Book Author',
+      'type' => 'varchar',
+      'length' => '100',
+      'not null' => TRUE,
+    ),
+    'isbn' => array(
+      'description' => 'Book ISBN number',
+      'type' => 'varchar',
+      'length' => '15',
+      'not null' => TRUE,
+    ),
+    'status' => array(
+      'description' => 'Book Status',
+      'type' => 'varchar',
+      'length' => '12',
+      'not null' => TRUE,
+    ),
+  ),
+  'primary key' => array('id'),
+);
+
+	return $schema;
+}

@@ -1,0 +1,5 @@
+name = myBooks
+description = A module for books. Drupal training homework course 3.
+package = myProjects
+core = 7.x
+version = 7.x-1.0

@@ -1,0 +1,238 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+
+function mybooks_menu() {
+    $items = array();
+    
+    //page with form for adding books.
+    $items['mybooks'] = array(
+        'title' => t('My Books'),
+        'page callback' => 'mybooks_form', 
+        'access arguments' => array('administer mybooks module'), //function for permissions.
+        'type' => MENU_NORMAL_ITEM,
+    );
+    //page withform for editing book status.
+    $items['mybooksedit'] = array(
+        'title' => t('My Books Edit'),
+        'page callback' => 'mybooks_edit_form', 
+        'access arguments' => array('administer mybooks module'), //function for permissions.
+        'type' => MENU_NORMAL_ITEM,
+    );
+
+    //page for displaying mybooks database table content.
+    $items['custom_table'] = array( 
+        'title' => 'My Books Table',
+        'page callback' => 'mytable_display', 
+        'access callback' => TRUE,
+        'type' => MENU_NORMAL_ITEM,
+    );
+
+    return $items;
+}
+
+/**
+ * Page callback mapped to the url /mybooks.
+ */
+
+function mybooks_form() {
+    return drupal_get_form('mybooks_myform');
+}
+
+/**
+ * Implements hook_form().
+ */
+
+function mybooks_myform($form, &$form_state) {
+    
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Book Title'),
+    '#required' => TRUE, 
+  );
+  $form['author'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Author'),
+    '#required' => TRUE,
+  );
+  $form['isbn'] = array(
+    '#type' => 'textfield',
+    '#title' => t('ISBN number'),
+    '#description' => 'ISBN should be a 10 or 13 digit number. Please do not enter non-digit characters.',
+    '#required' => TRUE, 
+  );
+  $form['status'] = array(
+    '#type' => 'select',
+    '#title' => t('Book Status'),
+    '#required' => TRUE, 
+    "#default_value" => variable_get("plugin1", true),
+    "#options" => array(
+        "In Stock" => t("In Stock"),
+        "Out of Stock" => t("Out of Stock"), 
+        ),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+    '#validate' =>  array('mybooks_form_validate'),
+    '#submit' =>  array('mybooks_form_submit'),
+  );
+  return $form;
+}
+
+/**
+ * Implements mybooks_form_validate().
+ * Checks if ISBN number contains 10 or 13 only digit characters.
+ */
+function mybooks_form_validate($form, $form_state) { 
+    if ((strlen($form_state['values']['isbn']) != 10) 
+            && (strlen($form_state['values']['isbn']) != 13)
+            || (!ctype_digit($form_state['values']['isbn']))){
+                form_set_error('isbn', 'Please enter valid ISBN-10 or ISBN-13 number.');
+    }
+}
+
+/**
+ * Implements mybooks_form_submit().
+ */
+
+function mybooks_form_submit($form, $form_state) {
+
+  db_insert('mybooks')
+    ->fields(array(
+      'title' => $form_state['values']['title'], 
+      'author' => $form_state['values']['author'],  
+      'isbn' => $form_state['values']['isbn'],  
+      'status' => $form_state['values']['status'],       
+    ))->execute();
+    drupal_set_message("Book added successfully to database! yuhuuuu!");
+}
+
+
+/**
+ * Page callback mapped to the url /mybooksedit.
+ */
+
+function mybooks_edit_form() {
+    return drupal_get_form('mybooks_editform');
+}
+
+/**
+ * Implements hook_form().
+ */
+
+function mybooks_editform($form, &$form_state) {
+    
+  $form['id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('ID'),
+    '#description' => 'Enter ID of the book you want to edit. ID can be seen on My Books Table page',
+    '#required' => TRUE, 
+  );
+
+  $form['status'] = array(
+    '#type' => 'select',
+    '#title' => t('Book Status'),
+    '#required' => TRUE, 
+    "#default_value" => variable_get("plugin1", true),
+    "#options" => array(
+        "In Stock" => t("In Stock"),
+        "Out of Stock" => t("Out of Stock"), 
+        ),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+    '#submit' =>  array('mybooks_edit_form_submit'),
+  );
+  return $form;
+}
+
+/**
+ * Implements mybooks_edit_form_submit().
+ */
+
+function mybooks_edit_form_submit($form, $form_state) {
+
+ db_update('mybooks')
+    ->fields(array(
+            
+            'status' => $form_state['values']['status'],
+            )
+    )
+    ->condition('id', $form_state['values']['id'])
+    ->execute();
+    drupal_set_message("Book status was updated successfully! yuhuuuu!");
+}
+
+
+/**
+ * Implements hook_permission().
+ */
+
+function mybooks_permission() {
+  return array(
+    'administer mybooks module' => array(
+      'title' => t('Administer mybooks module'),
+      'description' => t('Perform administration tasks for mybooks module.'),
+    ),
+  );
+}
+
+
+/**
+ * Function to display mybooks database table in table format.
+ */
+
+function mytable_display() {
+$header = array(
+            array(
+                'data' => t('ID'),
+                'field' => 't.id',
+            ),
+            array(
+                'data' => t('Title'),
+                'field' => 't.title',
+            ),
+            array(
+                'data' => t('Author'),
+                'field' => 't.author',
+            ),
+            array(
+                'data' => t('ISBN number'),
+                'field' => 't.isbn',
+            ),
+            array(
+                'data' => t('Status'),
+                'field' => 't.status',
+            ),
+        );
+
+  $query = db_select('mybooks', 't');
+
+  $query->fields('t', array('id','title','author','isbn','status'));  // select your required fields here.
+
+  $table_sort = $query->extend('TableSort') // Add table sort extender.
+                      ->orderByHeader($header); // Add order by headers.
+
+  $pager = $table_sort->extend('PagerDefault')
+                      ->limit(20);  // here you can limit the number of data per page.
+
+  $result = $pager->execute();
+
+  $rows = array();
+        foreach ($result as $row) {
+            $rows[] = array('data' => array($row->id, $row->title, $row->author, $row->isbn, $row->status));
+        }
+  // If rows are not empty theme and display the rows.
+
+   $output = theme('pager');
+        $output .= theme('table', array('header' => $header, 'rows' => $rows, "empty" => t("No Records Found"), 'attributes' => array('id' => 'sort-table', 'class' => array('tbl-data'))));
+        $output .= theme('pager');
+
+    return $output;
+}
